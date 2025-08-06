@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from google.cloud import storage
+from minio import Minio
 from sklearn.model_selection import train_test_split
 from src.logger import get_logger
 from src.custom_exception import CustomException
@@ -15,6 +16,11 @@ class DataIngestion:
         self.bucket_name = self.config["bucket_name"]
         self.file_name = self.config["bucket_file_name"]
         self.train_test_ratio = self.config["train_ratio"]
+        self.storage_provider = self.config.get("storage_provider", "gcp").lower()
+        self.minio_endpoint = self.config.get("minio_endpoint")
+        self.minio_access_key = self.config.get("minio_access_key")
+        self.minio_secret_key = self.config.get("minio_secret_key")
+        self.minio_secure = self.config.get("minio_secure", False)
 
         os.makedirs(RAW_DIR , exist_ok=True)
 
@@ -31,8 +37,23 @@ class DataIngestion:
             logger.info(f"CSV file is sucesfully downloaded to {RAW_FILE_PATH}")
 
         except Exception as e:
-            logger.error("Error while downloading the csv file")
-            raise CustomException("Failed to downlaod csv file ", e)
+            logger.error("Error while downloading the csv file from GCP")
+            raise CustomException("Failed to downlaod csv file from GCP", e)
+
+    def download_csv_from_minio(self):
+        try:
+            client = Minio(
+                self.minio_endpoint,
+                access_key=self.minio_access_key,
+                secret_key=self.minio_secret_key,
+                secure=self.minio_secure,
+            )
+            client.fget_object(self.bucket_name, self.file_name, RAW_FILE_PATH)
+            logger.info(f"CSV file is sucesfully downloaded to {RAW_FILE_PATH} from Minio")
+
+        except Exception as e:
+            logger.error("Error while downloading the csv file from Minio")
+            raise CustomException("Failed to downlaod csv file from Minio", e)
         
     def split_data(self):
         try:
@@ -55,7 +76,10 @@ class DataIngestion:
         try:
             logger.info("Starting data ingestion process")
 
-            self.download_csv_from_gcp()
+            if self.storage_provider == "minio":
+                self.download_csv_from_minio()
+            else:
+                self.download_csv_from_gcp()
             self.split_data()
 
             logger.info("Data ingestion completed sucesfully")
