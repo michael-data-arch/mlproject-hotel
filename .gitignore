@@ -1,0 +1,5 @@
+venv/
+mlruns/
+logs/
+MLOPS_PROJECT_1.egg-info/
+mythic-mission-468014-p8-486142d051f9.json
