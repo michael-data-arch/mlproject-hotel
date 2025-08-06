@@ -1,6 +1,7 @@
-pandas 
+pandas
 numpy
 google-cloud-storage
+minio
 scikit-learn
 pyyaml
 imbalanced-learn
